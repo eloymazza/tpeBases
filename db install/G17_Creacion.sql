@@ -202,3 +202,107 @@ ALTER TABLE GR17_POSICION ADD CONSTRAINT UQ_GR17_POSICION_POS_GLOBAL
 
 -- End of file.
 
+-- Inserts
+
+INSERT INTO GR17_CLIENTE (cuit_cuil,apellido,nombre,fecha_alta) VALUES
+(1, 'Lord', 'Farcuat', '01/25/2018'),
+(2, 'Carlos', 'Martel', '05/19/2014'),
+(3, 'Daenerys', 'Targeryen', '07/12/2017'),
+(4, 'Marco', 'Polo', '11/15/2018'),
+(5, 'John', 'Snow', '12/27/2019');
+
+
+INSERT INTO GR17_ALQUILER (id_alquiler,id_cliente,fecha_desde,fecha_hasta,importe_dia) VALUES
+(1,1,'01-01-2019','07-01-2019',10),
+(2,2,'02-15-2019','12-01-2019',15),
+(3,3,'03-15-2018','05-15-2019',12),
+(4,4,'04-30-2019','08-30-2019',20),
+(5,5,'05-01-2017','05-30-2019',5);
+
+INSERT INTO GR17_ESTANTERIA (nro_estanteria, nombre_estanteria) VALUES
+(1, 'A'),
+(2, 'B'),
+(3, 'C'),
+(4, 'D'),
+(5, 'E');
+
+INSERT INTO GR17_FILA (nro_estanteria, nro_fila, nombre_fila, peso_max_kg, alto_mts) VALUES
+(1, 1, 'A1', 200.00, 1.25),
+(2, 1, 'B1', 200.00, 1.25),
+(3, 1, 'C1', 200.00, 1.25),
+(4, 1, 'D1', 200.00, 1.25),
+(5, 1, 'E1', 400.00, 1.25);
+
+INSERT INTO GR17_POSICION (nro_posicion, nro_estanteria, nro_fila, tipo, pos_global) VALUES
+(1, 1, 1, 'a', 001001001),
+(1, 2, 1, 'b', 001002001),
+(1, 3, 1, 'c', 001003001),
+(1, 4, 1, 'a', 001004001),
+(1, 5, 1, 'd', 001005001),
+(2, 1, 1, 'a', 002001001),
+(2, 2, 1, 'b', 002002001),
+(2, 3, 1, 'c', 002003001),
+(2, 4, 1, 'd', 002004001),
+(2, 5, 1, 'e', 002005001);
+
+INSERT INTO GR17_ALQUILER_POSICIONES (id_alquiler, nro_posicion, nro_estanteria, nro_fila, estado) VALUES
+(1, 1, 1, 1, true),
+(2, 1, 2, 1, true),
+(3, 1, 3, 1, true),
+(4, 1, 4, 1, true),
+(5, 1, 5, 1, true);
+
+
+
+INSERT INTO GR17_PALLET (cod_pallet, descripcion, peso) VALUES
+(1, 'Juguetes', 8.00),
+(2, 'Herramientas', 100.00),
+(3, 'Hardware', 50.00),
+(4, 'Medicamentos', 20.00),
+(5, 'Patentes truchas', 17.00);
+
+
+INSERT INTO GR17_MOVIMIENTO (id_movimiento, fecha, responsable, tipo) VALUES
+(1, '02-15-2019', 'Juan', 'e'),
+(2, '02-15-2019', 'Pedro', 'e'),
+(3, '03-15-2018', 'Johana', 'e'),
+(4, '01-01-2019', 'Isabel', 'e'),
+(5, '04-30-2017', 'Oscar', 'e'),
+(6, '03-15-2019', 'Juan', 'i'),
+(7, '03-01-2019', 'Pedro', 'i'),
+(8, '03-30-2018', 'Johana', 'i'),
+(9, '01-30-2019', 'Isabel', 'i'),
+(10, '05-30-2019', 'Isabel', 'i'),
+(11, '03-30-2017', 'Oscar', 's'),
+(12, '03-30-2019', 'Juan', 's'),
+(13, '04-15-2019', 'Pedro', 's'),
+(14, '02-15-2018', 'Johana', 's'),
+(15, '06-01-2019', 'Isabel', 's');
+
+INSERT INTO GR17_MOV_ENTRADA (id_movimiento, transporte, guia,cod_pallet,id_alquiler,nro_posicion,nro_estanteria,nro_fila) VALUES
+(1, 'Zampi', 'A', 1,1,1,1,1),
+(2, 'Camion', 'B', 2,2,1,2,1),
+(3, 'Camioneta', 'C', 3,3,1,3,1),
+(4, 'Particular', 'D', 4,4,1,4,1),
+(5, 'Camion', 'E', 5,5,1,5,1);
+
+INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila) VALUES
+(6, 'Optimizacion', 2, 1, 1),
+(7, 'Otros', 2, 2, 1),
+(8, 'Optimizacion',2, 3, 1),
+(9, 'Pedido Cliente', 1, 4, 1),
+(10, 'Otros', 2, 5, 1);
+
+INSERT INTO GR17_MOV_SALIDA (id_movimiento, transporte, guia) VALUES
+(11, 'Zampi', 'A'),
+(12, 'Zampi', 'B'),
+(13, 'Camioneta', 'C'),
+(14, 'Camion', 'D'),
+(15, 'Particular', 'E');
+
+
+
+
+
+
+
