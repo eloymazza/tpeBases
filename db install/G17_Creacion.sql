@@ -77,6 +77,7 @@ CREATE TABLE GR17_MOV_INTERNO (
     nro_posicion int  NOT NULL,
     nro_estanteria int  NOT NULL,
     nro_fila int  NOT NULL,
+    id_movimiento_anterior int NOT NULL,
     CONSTRAINT PK_GR17_MOV_INTERNO PRIMARY KEY (id_movimiento)
 );
 
@@ -85,6 +86,7 @@ CREATE TABLE GR17_MOV_SALIDA (
     id_movimiento int  NOT NULL,
     transporte varchar(80)  NOT NULL,
     guia varchar(80)  NOT NULL,
+    id_movimiento_entrada int NOT NULL,
     CONSTRAINT PK_GR17_MOV_SALIDA PRIMARY KEY (id_movimiento)
 );
 
@@ -147,6 +149,14 @@ ALTER TABLE GR17_MOV_ENTRADA ADD CONSTRAINT FK_GR17_MOV_ENTRADA_ALQUILER_POSICIO
     INITIALLY IMMEDIATE
 ;
 
+-- Mov salida tiene que referir a un mov entrada
+ALTER TABLE GR17_MOV_SALIDA ADD CONSTRAINT FK_GR17_MOV_SALIDA_MOV_ENTRADA
+    FOREIGN KEY (id_movimiento_entrada)
+    REFERENCES GR17_MOV_ENTRADA (id_movimiento)  
+    NOT DEFERRABLE 
+    INITIALLY IMMEDIATE
+;
+
 -- Reference: FK_MOV_ENTRADA_MOVIMIENTO (table: MOV_ENTRADA)
 ALTER TABLE GR17_MOV_ENTRADA ADD CONSTRAINT FK_GR17_MOV_ENTRADA_MOVIMIENTO
     FOREIGN KEY (id_movimiento)
@@ -166,6 +176,14 @@ ALTER TABLE GR17_MOV_ENTRADA ADD CONSTRAINT FK_GR17_MOV_ENTRADA_PALLET
 -- Reference: FK_MOV_INTERNO_MOVIMIENTO (table: MOV_INTERNO)
 ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_MOVIMIENTO
     FOREIGN KEY (id_movimiento)
+    REFERENCES GR17_MOVIMIENTO (id_movimiento)  
+    NOT DEFERRABLE 
+    INITIALLY IMMEDIATE
+;
+
+-- Mov interno tiene que referir a otro movimiento interno o de entrada
+ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_MOVIMIENTO_ANTERIOR
+    FOREIGN KEY (id_movimiento_anterior)
     REFERENCES GR17_MOVIMIENTO (id_movimiento)  
     NOT DEFERRABLE 
     INITIALLY IMMEDIATE
@@ -234,16 +252,16 @@ INSERT INTO GR17_FILA (nro_estanteria, nro_fila, nombre_fila, peso_max_kg, alto_
 (5, 1, 'E1', 400.00, 1.25);
 
 INSERT INTO GR17_POSICION (nro_posicion, nro_estanteria, nro_fila, tipo, pos_global) VALUES
-(1, 1, 1, 'a', 001001001),
-(1, 2, 1, 'b', 001002001),
-(1, 3, 1, 'c', 001003001),
-(1, 4, 1, 'a', 001004001),
-(1, 5, 1, 'd', 001005001),
-(2, 1, 1, 'a', 002001001),
-(2, 2, 1, 'b', 002002001),
-(2, 3, 1, 'c', 002003001),
-(2, 4, 1, 'd', 002004001),
-(2, 5, 1, 'e', 002005001);
+(1, 1, 1, 'general', 001001001),
+(1, 2, 1, 'insecticidas', 001002001),
+(1, 3, 1, 'vidrio', 001003001),
+(1, 4, 1, 'general', 001004001),
+(1, 5, 1, 'vidrio', 001005001),
+(2, 1, 1, 'inflamable', 002001001),
+(2, 2, 1, 'general', 002002001),
+(2, 3, 1, 'insecticidas', 002003001),
+(2, 4, 1, 'inflamable', 002004001),
+(2, 5, 1, 'general', 002005001);
 
 INSERT INTO GR17_ALQUILER_POSICIONES (id_alquiler, nro_posicion, nro_estanteria, nro_fila, estado) VALUES
 (1, 1, 1, 1, true),
@@ -286,23 +304,16 @@ INSERT INTO GR17_MOV_ENTRADA (id_movimiento, transporte, guia,cod_pallet,id_alqu
 (4, 'Particular', 'D', 4,4,1,4,1),
 (5, 'Camion', 'E', 5,5,1,5,1);
 
-INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila) VALUES
-(6, 'Optimizacion', 2, 1, 1),
-(7, 'Otros', 2, 2, 1),
-(8, 'Optimizacion',2, 3, 1),
-(9, 'Pedido Cliente', 1, 4, 1),
-(10, 'Otros', 2, 5, 1);
+INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila, id_movimiento_anterior) VALUES
+(6, 'Optimizacion', 2, 1, 1, 1),
+(7, 'Otros', 2, 2, 1, 2),
+(8, 'Optimizacion',2, 3, 1, 3),
+(9, 'Pedido Cliente', 1, 4, 1, 4),
+(10, 'Otros', 2, 5, 1, 6);
 
-INSERT INTO GR17_MOV_SALIDA (id_movimiento, transporte, guia) VALUES
-(11, 'Zampi', 'A'),
-(12, 'Zampi', 'B'),
-(13, 'Camioneta', 'C'),
-(14, 'Camion', 'D'),
-(15, 'Particular', 'E');
-
-
-
-
-
-
-
+INSERT INTO GR17_MOV_SALIDA (id_movimiento, transporte, guia, id_movimiento_entrada) VALUES
+(11, 'Zampi', 'A', 1),
+(12, 'Zampi', 'B', 2),
+(13, 'Camioneta', 'C', 3),
+(14, 'Camion', 'D', 4),
+(15, 'Particular', 'E', 5);
