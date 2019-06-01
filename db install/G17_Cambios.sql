@@ -84,4 +84,20 @@ RETURN (
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger para modificar estado al ingresar un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_ENTRADA
+AFTER INSERT
+ON GR17_MOV_ENTRADA FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion();
+
+-- Actualiza el estado de la posicion al ingresar un nuevo pallet
+CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion() 
+RETURNS char AS $$
+BEGIN 
+    UPDATE GR17_ALQUILER_POSICIONES 
+    SET estado='true'
+    WHERE nro_posicion=new.nro_posicion AND nro_fila=new.nro_fila AND nro_estanteria=new.nro_estanteria;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
