@@ -9,6 +9,13 @@ ALTER TABLE GR17_POSICION ADD CONSTRAINT CHK_GR17_POSICION_TIPO CHECK (
     tipo IN ('general', 'vidrio', 'insecticidas', 'inflamable')
 );
 
+-- Tigger para verificar peso de fila cada vez q se inserta 
+-- o actualiza un movimiento de entrada
+CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
+AFTER INSERT OR UPDATE 
+ON GR17_MOV_ENTRADA for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarpeso();
+
 -- El peso de los pallets de una fila no debe superar al máximo de la fila.
 CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso() 
 RETURNS TRIGGER AS $verif$
@@ -21,7 +28,7 @@ END;
 $verif$ LANGUAGE plpgsql;
 
 -- Sumatoria del peso de todos los pallets dada una fila y una estanteria
-CREATE OR REPLACE FUNCTION sumaPesoFila(int,int) 
+CREATE OR REPLACE FUNCTION FN_GR17_sumaPesoFila(int,int) 
 RETURNS numeric AS $$
 BEGIN
     RETURN  
@@ -36,7 +43,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- Obtener Max_Peso dada una fila y una estanteria
-CREATE OR REPLACE FUNCTION getMaxPeso(int, int) 
+CREATE OR REPLACE FUNCTION FN_GR17_getMaxPeso(int, int) 
 RETURNS numeric AS $$
 BEGIN
     RETURN  
@@ -46,9 +53,35 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Tigger para verificar peso de fila cada vez q se inserta 
--- o actualiza un movimiento de entrada
-CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
-AFTER INSERT OR UPDATE 
-ON GR17_MOV_ENTRADA for each row
-EXECUTE PROCEDURE TRFN_GR17_verificarpeso();
+-- Trigger para controlar que cada movimiento interno referencie a otro mov interno
+-- O a un movmiento de entrada.
+CREATE TRIGGER TR_GR17_MOV_INTERNO_VERIFICAR_MOV_ANTERIOR
+AFTER INSERT OR UPDATE OF id_movimiento_anterior
+ON GR17_MOV_INTERNO FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_verificaMovAnterior();
+
+-- Vefirica movimiento anterior es movimiento interno o movimiento de entrada.
+CREATE OR REPLACE FUNCTION TRFN_GR17_verificaMovAnterior() 
+RETURNS TRIGGER AS $body$
+BEGIN 
+    IF FN_GR17_getTipoMovimiento(new.id_movimiento_anterior) = 's' 
+    THEN RAISE EXCEPTION 'Los movimientos internos solo pueden hacer referencia
+    a un movimiento de entrada o a otro movimiento interno';
+    END IF;
+RETURN NEW;
+END;
+$body$ LANGUAGE plpgsql;
+
+-- Retorna el tipo de un movimiento dado un id_movimiento como parametro
+CREATE OR REPLACE FUNCTION FN_GR17_getTipoMovimiento(int) 
+RETURNS char AS $$
+BEGIN 
+RETURN (
+    SELECT tipo 
+    FROM GR17_MOVIMIENTO 
+    WHERE id_movimiento = $1
+);
+END;
+$$ LANGUAGE plpgsql;
+
+
