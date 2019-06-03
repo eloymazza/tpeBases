@@ -86,18 +86,105 @@ $$ LANGUAGE plpgsql;
 
 -- Trigger para modificar estado al ingresar un pallet
 CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_ENTRADA
-AFTER INSERT
+AFTER INSERT OR UPDATE OF nro_estanteria, nro_fila, nro_posicion, id_alquiler
 ON GR17_MOV_ENTRADA FOR EACH ROW
 EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion();
 
 -- Actualiza el estado de la posicion al ingresar un nuevo pallet
-CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion() 
-RETURNS char AS $$
+CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_entrada() 
+RETURNS TRIGGER AS $BODY$
 BEGIN 
     UPDATE GR17_ALQUILER_POSICIONES 
     SET estado='true'
-    WHERE nro_posicion=new.nro_posicion AND nro_fila=new.nro_fila AND nro_estanteria=new.nro_estanteria;
+    WHERE nro_posicion=new.nro_posicion AND nro_fila=new.nro_fila AND nro_estanteria=new.nro_estanteria AND id_alquiler=new.id_alquiler;
+END IF;
 RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$BODY$ LANGUAGE plpgsql;
 
+-- Trigger para modificar estado al quitar  un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_SALIDA
+AFTER INSERT
+ON GR17_MOV_SALIDA FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_salida();
+
+-- Actualiza el estado de la posicion al quitar un pallet
+CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_salida() 
+RETURNS TRIGGER AS $BODY$
+BEGIN 
+    UPDATE GR17_ALQUILER_POSICIONES 
+    SET estado='false'
+    WHERE 
+    nro_posicion = (SELECT nro_posicion FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada) AND
+    nro_fila =  (SELECT nro_fila FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada) AND 
+    nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada) AND 
+    id_alquiler= (SELECT id_alquiler FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada);
+RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+
+-- Trigger para modificar estado al quitar  un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_INTERNO
+AFTER INSERT
+ON GR17_MOV_INTERNO FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_interno();
+
+-- Actualiza el estado de la posicion al realar un movimiento interno 
+CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_interno() 
+RETURNS TRIGGER AS $BODY$
+DECLARE
+    nombreTabla text;
+BEGIN 
+    IF (SELECT tipo FROM GR17_MOVIMIENTO WHERE id_movimiento = new.id_movimiento_anterior) = 'e' THEN
+        UPDATE GR17_ALQUILER_POSICIONES 
+        SET estado='false'
+        WHERE 
+        nro_posicion = (SELECT nro_posicion FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior) AND
+        nro_fila =  (SELECT nro_fila FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior) AND 
+        nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior) AND 
+        id_alquiler = (SELECT id_alquiler FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior);
+
+        UPDATE GR17_ALQUILER_POSICIONES
+        SET estado='true'
+        WHERE nro_posicion = new.nro_posicion 
+        AND nro_fila = new.nro_fila 
+        AND nro_estanteria = new.nro_estanteria;
+    ELSE 
+        UPDATE GR17_ALQUILER_POSICIONES 
+        SET estado='false'
+        WHERE 
+        nro_posicion = (SELECT nro_posicion FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_anterior) AND
+        nro_fila =  (SELECT nro_fila FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_anterior) AND
+        nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_anterior)
+
+        UPDATE GR17_ALQUILER_POSICIONES
+        SET estado='true'
+        WHERE nro_posicion = new.nro_posicion 
+        AND nro_fila = new.nro_fila 
+        AND nro_estanteria = new.nro_estanteria;
+    END IF;
+RETURN NEW;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+/*
+-- Tirggers para impedir update de las FKs de los movimientos de entrada
+CREATE TRIGGER TR_GR17_IMPEDIR_UPDATE_FK_MOVIMIENTO_ENTRADA
+BEFORE UPDATE OF id_alquiler, id_movimiento, cod_pallet, nro_posicion, nro_estanteria, nro_fila
+ON GR17_MOV_ENTRADA FOR STATEMENT
+EXECUTE PROCEDURE TRFN_GR17_excepcionAlActualizarMov();
+
+-- Tirggers para impedir update de las FKs los movimientos de salida
+CREATE TRIGGER TR_GR17_IMPEDIR_UPDATE_FK_MOVIMIENTO_SALIDA
+BEFORE UPDATE OF 
+ON GR17_MOV_ENTRADA FOR STATEMENT
+EXECUTE PROCEDURE TRFN_GR17_excepcionAlActualizarMov();
+
+-- Actualiza el estado de la posicion al quitar un pallet
+CREATE OR REPLACE FUNCTION TRFN_GR17_excepcionAlActualizarMov() 
+RETURNS TRIGGER AS $BODY$
+BEGIN 
+RAISE EXCEPTION 'No puedes editar las FKs de movimientos';
+END;
+$BODY$ LANGUAGE plpgsql;*/

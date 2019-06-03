@@ -12,7 +12,7 @@
         );
         echo $selectPosLibres;
 
-        $db = new PDO("pgsql:host=dbases.exa.unicen.edu.ar; port=6432; user=unc_248849; dbname=cursada; password=altairezzio1");
+        $db = new PDO("pgsql:host=dbases.exa.unicen.edu.ar; port=6432; user=unc_248849; dbname=cursada; password=**");
         $query = $db->prepare($selectPosLibres);
         $query->execute();
         $result = $query->fetchAll();
