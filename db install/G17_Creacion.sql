@@ -77,7 +77,8 @@ CREATE TABLE GR17_MOV_INTERNO (
     nro_posicion int  NOT NULL,
     nro_estanteria int  NOT NULL,
     nro_fila int  NOT NULL,
-    id_movimiento_anterior int NOT NULL,
+    id_movimiento_entrada int NULL,
+    id_movimiento_interno int NULL,
     CONSTRAINT PK_GR17_MOV_INTERNO PRIMARY KEY (id_movimiento)
 );
 
@@ -181,13 +182,18 @@ ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_MOVIMIENTO
     INITIALLY IMMEDIATE
 ;
 
--- Mov interno tiene que referir a otro movimiento interno o de entrada
-ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_MOVIMIENTO_ANTERIOR
-    FOREIGN KEY (id_movimiento_anterior)
-    REFERENCES GR17_MOVIMIENTO (id_movimiento)  
-    NOT DEFERRABLE 
-    INITIALLY IMMEDIATE
+-- Mov interno puede referir a otro movimiento interno
+ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_MOVIMIENTO_INTERNO
+    FOREIGN KEY (id_movimiento_interno)
+    REFERENCES GR17_MOV_INTERNO (id_movimiento)  
 ;
+
+-- Mov interno puede que referir a un movimiento de entrada
+ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_MOVIMIENTO_ENTRADA
+    FOREIGN KEY (id_movimiento_entrada)
+    REFERENCES GR17_MOV_ENTRADA (id_movimiento)  
+;
+
 
 -- Reference: FK_MOV_INTERNO_POSICION (table: MOV_INTERNO)
 ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT FK_GR17_MOV_INTERNO_POSICION
@@ -304,12 +310,12 @@ INSERT INTO GR17_MOV_ENTRADA (id_movimiento, transporte, guia,cod_pallet,id_alqu
 (4, 'Particular', 'D', 4,4,1,4,1),
 (5, 'Camion', 'E', 5,5,1,5,1);
 
-INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila, id_movimiento_anterior) VALUES
-(6, 'Optimizacion', 2, 1, 1, 1),
-(7, 'Otros', 2, 2, 1, 2),
-(8, 'Optimizacion',2, 3, 1, 3),
-(9, 'Pedido Cliente', 1, 4, 1, 4),
-(10, 'Otros', 2, 5, 1, 6);
+INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila, id_movimiento_entrada, id_movimiento_interno) VALUES
+(6, 'Optimizacion', 2, 1, 1, 1, null),
+(7, 'Otros', 2, 2, 1, 2, null),
+(8, 'Optimizacion',2, 3, 1, 3, null),
+(9, 'Pedido Cliente', 1, 4, 1, 4, null),
+(10, 'Otros', 2, 5, 1, null, 6);
 
 INSERT INTO GR17_MOV_SALIDA (id_movimiento, transporte, guia, id_movimiento_entrada) VALUES
 (11, 'Zampi', 'A', 1),
