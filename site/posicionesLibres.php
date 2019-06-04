@@ -3,24 +3,7 @@
     function getPosicionesLibres(){
         global $db;
         $fecha = "'".$_POST["fecha"]."'";
-        $selectPosLibres = ("
-            SELECT nro_posicion, nro_estanteria, nro_fila
-            FROM GR17_ALQUILER_POSICIONES ap
-            WHERE id_alquiler NOT IN (
-                SELECT id_alquiler 
-                FROM GR17_ALQUILER
-                WHERE fecha_desde < $fecha AND fecha_hasta > $fecha
-            )
-            UNION
-            SELECT nro_posicion, nro_estanteria, nro_fila
-            FROM GR17_POSICION
-            WHERE (nro_posicion, nro_estanteria, nro_fila) NOT IN (
-                SELECT nro_posicion, nro_estanteria, nro_fila 
-                FROM GR17_ALQUILER_POSICIONES
-            )
-        ");
-
-        $query = $db->prepare($selectPosLibres);
+        $query = $db->prepare("SELECT * FROM getPosicionesLibres('2001-01-01')");
         $query->execute();
         $posLibres = $query->fetchAll(PDO::FETCH_ASSOC);
         if(sizeOf($posLibres) == 0){

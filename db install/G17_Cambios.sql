@@ -149,6 +149,57 @@ RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
 
+-- FUNCIONES PARA REALIZAR LOS SERVICIOS DEL PUNTO C
+
+-- C-1 Obtener posiciones libres dada una fecha
+DROP FUNCTION getposicioneslibres(date);
+CREATE OR REPLACE FUNCTION getPosicionesLibres(date) 
+RETURNS SETOF GR17_POSICION AS $BODY$
+DECLARE
+    r GR17_POSICION%rowtype;
+BEGIN 
+    FOR r IN
+        SELECT nro_estanteria, nro_fila, nro_posicion
+        FROM GR17_ALQUILER_POSICIONES 
+        WHERE id_alquiler NOT IN (
+            SELECT id_alquiler 
+            FROM GR17_ALQUILER
+            WHERE fecha_desde < $1 AND fecha_hasta > $1
+        )
+        UNION
+        SELECT nro_estanteria , nro_fila, nro_posicion
+        FROM GR17_POSICION
+        WHERE (nro_posicion, nro_estanteria, nro_fila) NOT IN (
+            SELECT nro_posicion, nro_estanteria, nro_fila 
+            FROM GR17_ALQUILER_POSICIONES
+        )
+    LOOP
+        RETURN NEXT r;
+    END LOOP;
+    RETURN;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+
+-- C-2. Obtener los datos de los clientes a los cuales hay que notificar que el alquiler se vence en x dias (Configurable)
+CREATE OR REPLACE FUNCTION getClientesANotificar(integer) 
+RETURNS SETOF GR17_CLIENTE AS $BODY$
+DECLARE
+    r GR17_CLIENTE%rowtype;
+BEGIN 
+    FOR r IN
+        SELECT *
+        FROM GR17_CLIENTE c
+        JOIN GR17_ALQUILER a ON (a.id_cliente = c.cuit_cuil)
+        WHERE fecha_hasta - $1 = CURRENT_DATE
+    LOOP
+        RETURN NEXT r;
+    END LOOP;
+    RETURN;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+
 
 -- VISTAS
 -- Vista que indica el estado de cada posicion junto con los dias restantes de alquiler en caso de ser TRUE su estado (es decir que la posicion este alquilada)
@@ -228,3 +279,5 @@ BEGIN
 RAISE EXCEPTION 'No puedes editar las FKs de movimientos';
 END;
 $BODY$ LANGUAGE plpgsql;*/
+
+

@@ -17,7 +17,7 @@
             </form>
             <h2>Obtener Alquileres por vencer</h2>
             <form action="vencimientoAlquiler.php" method="post">
-                <input type="number" placeholder="Ingrese Cantidad de dias" name="dias">
+                <input type="number" placeholder="Ingrese Cantidad de dias" name="dias" >
                 <input type="submit" value="Enviar">
             </form>
         </body>
