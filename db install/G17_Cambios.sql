@@ -150,16 +150,27 @@ END;
 $BODY$ LANGUAGE plpgsql;
 
 
+-- VISTAS
+-- Vista que indica el estado de cada posicion junto con los dias restantes de alquiler en caso de ser TRUE su estado (es decir que la posicion este alquilada)
 
-
-
-
-
-
-
-
-
-
+CREATE VIEW GR17_ESTADO_POSICIONES AS 
+-- Selecciona todas las posiciones de alquiler_posiciones que no esten siendo ocupadas actualmente
+SELECT nro_estanteria, nro_posicion, nro_fila, estado, NULL AS dias_restantes_alquiler 
+FROM GR17_ALQUILER_POSICIONES
+WHERE estado=false
+UNION 
+-- Selecciona todas las posiciones de la tabla posicion que no aparezcan en la tabla alquiler_posiciones. Estas no estaran ocupadas
+SELECT nro_estanteria, nro_posicion, nro_fila, FALSE, NULL AS dias_restantes_alquiler 
+FROM GR17_POSICION 
+WHERE (nro_posicion, nro_estanteria, nro_fila) NOT IN (
+    SELECT nro_posicion, nro_estanteria, nro_fila 
+    FROM GR17_ALQUILER_POSICIONES
+)
+UNION 
+-- Selecciona todas las posiciones ocupadas en la tabla alquiler_posiciones
+SELECT nro_estanteria, nro_posicion, nro_fila, estado, text (fecha_hasta - CURRENT_DATE) AS dias_restantes_alquiler
+FROM GR17_ALQUILER_POSICIONES ap INNER JOIN GR17_ALQUILER a ON ap.id_alquiler = a.id_alquiler
+WHERE estado=true
 
 
 

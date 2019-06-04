@@ -239,9 +239,9 @@ INSERT INTO GR17_CLIENTE (cuit_cuil,apellido,nombre,fecha_alta) VALUES
 INSERT INTO GR17_ALQUILER (id_alquiler,id_cliente,fecha_desde,fecha_hasta,importe_dia) VALUES
 (1,1,'01-01-2019','07-01-2019',10),
 (2,2,'02-15-2019','12-01-2019',15),
-(3,3,'03-15-2018','05-15-2019',12),
-(4,4,'04-30-2019','08-30-2019',20),
-(5,5,'05-01-2017','05-30-2019',5);
+(3,3,'03-15-2018','08-15-2019',12),
+(4,4,'04-30-2019','07-30-2019',20),
+(5,5,'05-01-2017','08-30-2019',5);
 
 INSERT INTO GR17_ESTANTERIA (nro_estanteria, nombre_estanteria) VALUES
 (1, 'A'),
