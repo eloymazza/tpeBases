@@ -202,7 +202,9 @@ $BODY$ LANGUAGE plpgsql;
 
 
 -- VISTAS
--- Vista que indica el estado de cada posicion junto con los dias restantes de alquiler en caso de ser TRUE su estado (es decir que la posicion este alquilada)
+-- D1 -  - Vista que indica el estado de cada posicion junto con los
+-- dias restantes de alquiler en caso de ser TRUE su estado (es decir que 
+-- la posicion este alquilada)
 
 CREATE VIEW GR17_ESTADO_POSICIONES AS 
 -- Selecciona todas las posiciones de alquiler_posiciones que no esten siendo ocupadas actualmente
@@ -222,6 +224,16 @@ UNION
 SELECT nro_estanteria, nro_posicion, nro_fila, estado, text (fecha_hasta - CURRENT_DATE) AS dias_restantes_alquiler
 FROM GR17_ALQUILER_POSICIONES ap INNER JOIN GR17_ALQUILER a ON ap.id_alquiler = a.id_alquiler
 WHERE estado=true
+
+-- D-2  Vista que lista  los 10 clientes que más dinero han invertido en el último año (tomar el momento en el que se ejecuta la consulta hacia atrás).
+CREATE VIEW GR17_CLIENTES_MAS_VALIOSOS AS
+SELECT (a.fecha_hasta - a.fecha_desde) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido 
+FROM GR17_ALQUILER a
+JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
+WHERE a.fecha_desde < current_date AND fecha_desde > current_date - interval '1 year'
+ORDER BY 1 DESC
+LIMIT 10;
+
 
 
 
