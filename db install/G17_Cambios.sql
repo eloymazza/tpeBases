@@ -230,9 +230,10 @@ CREATE VIEW GR17_CLIENTES_MAS_VALIOSOS AS
 SELECT (a.fecha_hasta - a.fecha_desde) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido 
 FROM GR17_ALQUILER a
 JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
-WHERE a.fecha_desde < current_date AND fecha_desde > current_date - interval '1 year'
-ORDER BY 1 DESC
+WHERE (a.fecha_desde > current_date - interval '1 year') AND (a.fecha_desde < current_date ) AND (a.fecha_hasta < current_date)
+ORDER BY 1 desc
 LIMIT 10;
+
 
 
 
