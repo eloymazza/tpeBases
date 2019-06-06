@@ -152,7 +152,6 @@ $BODY$ LANGUAGE plpgsql;
 -- FUNCIONES PARA REALIZAR LOS SERVICIOS DEL PUNTO C
 
 -- C-1 Obtener posiciones libres dada una fecha
-DROP FUNCTION getposicioneslibres(date);
 CREATE OR REPLACE FUNCTION getPosicionesLibres(date) 
 RETURNS SETOF GR17_POSICION AS $BODY$
 DECLARE
@@ -223,18 +222,39 @@ UNION
 -- Selecciona todas las posiciones ocupadas en la tabla alquiler_posiciones
 SELECT nro_estanteria, nro_posicion, nro_fila, estado, text (fecha_hasta - CURRENT_DATE) AS dias_restantes_alquiler
 FROM GR17_ALQUILER_POSICIONES ap INNER JOIN GR17_ALQUILER a ON ap.id_alquiler = a.id_alquiler
-WHERE estado=true
+WHERE estado=true;
+
+
+-- Funcion para calcular la cantidad de dias que un cliente facturo el ultimo año.
+CREATE OR REPLACE FUNCTION GR17_FN_getCantDias(date,date)
+RETURNS integer AS $$
+DECLARE 
+ aYearBefore date := CURRENT_DATE - interval '1 year';
+ desde ALIAS FOR $1;
+ hasta ALIAS FOR $2;
+BEGIN
+    IF desde > CURRENT_DATE OR hasta < aYearBefore THEN 
+        RETURN 0;
+    ELSIF desde >= aYearBefore AND hasta <= CURRENT_DATE THEN 
+        RETURN hasta - desde;
+    ELSIF desde <= aYearBefore AND hasta <= CURRENT_DATE THEN
+        RETURN  hasta - aYearBefore;
+    ELSIF desde >= aYearBefore AND hasta >= CURRENT_DATE THEN
+        RETURN CURRENT_DATE - desde;
+    ELSIF desde < aYearBefore AND hasta > CURRENT_DATE THEN
+        RETURN 365;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
 
 -- D-2  Vista que lista  los 10 clientes que más dinero han invertido en el último año (tomar el momento en el que se ejecuta la consulta hacia atrás).
 CREATE VIEW GR17_CLIENTES_MAS_VALIOSOS AS
-SELECT (a.fecha_hasta - a.fecha_desde) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido 
+SELECT getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido 
 FROM GR17_ALQUILER a
 JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
-WHERE (a.fecha_desde > current_date - interval '1 year') AND (a.fecha_desde < current_date ) AND (a.fecha_hasta < current_date)
+WHERE getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia > 0
 ORDER BY 1 desc
 LIMIT 10;
-
-
 
 
 
