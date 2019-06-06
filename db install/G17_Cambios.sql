@@ -3,11 +3,22 @@ ALTER TABLE GR17_ALQUILER ADD CONSTRAINT CHK_GR17_ALQUILER_CONSISTENTE_FECHA CHE
     to_char(fecha_desde, 'YYYY-MM-DD') <= to_char(fecha_hasta, 'YYYY-MM-DD')
     OR fecha_desde IS NULL
 );
+--INSERCION PROMUEVE RESTRICCION CHK_GR17_ALQUILER_CONSISTENTE_FECHA:
+/*
+--INSERT INTO GR17_ALQUILER(id_alquiler, id_cliente, fecha_desde, fecha_hasta, importe_dia)
+VALUES (6, 1, '2019-12-12', '2019-01-01');
+*/
 
 -- Control de tipos posibles de posicion 
 ALTER TABLE GR17_POSICION ADD CONSTRAINT CHK_GR17_POSICION_TIPO CHECK (
     tipo IN ('general', 'vidrio', 'insecticidas', 'inflamable')
 );
+
+--INSERCION PROMUEVE RESTRICCION CHK_GR17_POSICION_TIPO:
+/*
+INSERT INTO GR17_POSICION (nro_posicion, nro_estanteria, nro_fila, tipo, pos_global) VALUES
+(17, 1, 1, 'Radioactivo', 001001017);
+*/
 
 -- Restriccion para que la tabla MOV_INTERNO no pueda referir a un movimiento
 -- interno y a uno de entrada a la vez, y que tampoco puedan ser ambos nulos
@@ -15,16 +26,21 @@ ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT CHK_GR17_MOVIMIENTO_INTERNO_REFERENC
     (id_movimiento_entrada IS NOT NULL AND id_movimiento_interno IS NULL) OR 
     (id_movimiento_entrada IS NULL AND id_movimiento_interno IS NOT NULL)
 );
+-- INSERCION QUE PROMUEVE RESTRICCION CHK_GR17_MOVIMIENTO_INTERNO_REFERENCIAS
+/*
+INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila, id_movimiento_entrada, id_movimiento_interno) VALUES
+(1, 'Optimizacion', 2, 1, 1, null, null);
+*/
 
--- LOS SIGUIENTES TRIGGERS/FUNCIONES CHECKEAN QUE EL PESO MAXIMO TOLERADO POR LA 
+-- LOS SIGUIENTES TRIGGERS/FUNCIO|NES CHECKEAN QUE EL PESO MAXIMO TOLERADO POR LA 
 -- FILA NO SE SOBREPASE
 
 -- Tigger para verificar peso de fila cada vez q se inserta 
--- o actualiza un movimiento de entrada
 CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
-AFTER INSERT OR UPDATE 
+AFTER INSERT 
 ON GR17_MOV_ENTRADA for each row
 EXECUTE PROCEDURE TRFN_GR17_verificarpeso();
+
 
 -- El peso de los pallets de una fila no debe superar al máximo de la fila.
 CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso() 
@@ -63,6 +79,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+--INSERCION QUE PROMUEVE RESTRICCION TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA:
+/*
+INSERT INTO GR17_MOVIMIENTO (id_movimiento, fecha, responsable, tipo) VALUES
+(20, '02-15-2019', 'Eloy', 'e');
+INSERT INTO GR17_PALLET (cod_pallet, descripcion, peso) VALUES
+(20, 'Juguetes', 8.00);
+INSERT INTO GR17_MOV_ENTRADA (id_movimiento, transporte, guia,cod_pallet,id_alquiler,nro_posicion,nro_estanteria,nro_fila) VALUES
+(20, 'Zampi', 'A', 20,1,1,1,1);
+*/
 
 
 -- lOS SIGUIENTES TRIGGERS/FUNCIONES HACEN EL UPDATE DEL ESTADO DE
@@ -152,7 +178,7 @@ $BODY$ LANGUAGE plpgsql;
 -- FUNCIONES PARA REALIZAR LOS SERVICIOS DEL PUNTO C
 
 -- C-1 Obtener posiciones libres dada una fecha
-CREATE OR REPLACE FUNCTION getPosicionesLibres(date) 
+CREATE OR REPLACE FUNCTION FN_GR17_getPosicionesLibres(date) 
 RETURNS SETOF GR17_POSICION AS $BODY$
 DECLARE
     r GR17_POSICION%rowtype;
@@ -181,7 +207,7 @@ $BODY$ LANGUAGE plpgsql;
 
 
 -- C-2. Obtener los datos de los clientes a los cuales hay que notificar que el alquiler se vence en x dias (Configurable)
-CREATE OR REPLACE FUNCTION getClientesANotificar(integer) 
+CREATE OR REPLACE FUNCTION FN_GR17_getClientesANotificar(integer) 
 RETURNS SETOF GR17_CLIENTE AS $BODY$
 DECLARE
     r GR17_CLIENTE%rowtype;
@@ -255,7 +281,6 @@ JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
 WHERE getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia > 0
 ORDER BY 1 desc
 LIMIT 10;
-
 
 
 -- CEMENTERIO DE METODOS

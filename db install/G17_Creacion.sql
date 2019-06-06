@@ -276,8 +276,6 @@ INSERT INTO GR17_ALQUILER_POSICIONES (id_alquiler, nro_posicion, nro_estanteria,
 (4, 1, 4, 1, true),
 (5, 1, 5, 1, true);
 
-
-
 INSERT INTO GR17_PALLET (cod_pallet, descripcion, peso) VALUES
 (1, 'Juguetes', 8.00),
 (2, 'Herramientas', 100.00),
