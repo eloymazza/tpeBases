@@ -178,6 +178,7 @@ $BODY$ LANGUAGE plpgsql;
 -- FUNCIONES PARA REALIZAR LOS SERVICIOS DEL PUNTO C
 
 -- C-1 Obtener posiciones libres dada una fecha
+-- PARAMETRO RECOMENDADO PARA PROBAR '2019-01-05'
 CREATE OR REPLACE FUNCTION FN_GR17_getPosicionesLibres(date) 
 RETURNS SETOF GR17_POSICION AS $BODY$
 DECLARE
@@ -207,6 +208,13 @@ $BODY$ LANGUAGE plpgsql;
 
 
 -- C-2. Obtener los datos de los clientes a los cuales hay que notificar que el alquiler se vence en x dias (Configurable)
+-- Para probar se recomienda:
+-- 1. Insertar Siguiente Alquieler:
+/*
+INSERT INTO GR17_ALQUILER (id_alquiler,id_cliente,fecha_desde,fecha_hasta,importe_dia) VALUES
+(7,5,'05-01-2017',CURRENT_DATE + interval '7 day',5);
+*/
+-- 2- Proveer siguiente parametro (dias): 7
 CREATE OR REPLACE FUNCTION FN_GR17_getClientesANotificar(integer) 
 RETURNS SETOF GR17_CLIENTE AS $BODY$
 DECLARE
@@ -223,8 +231,6 @@ BEGIN
     RETURN;
 END;
 $BODY$ LANGUAGE plpgsql;
-
-
 
 -- VISTAS
 -- D1 -  - Vista que indica el estado de cada posicion junto con los
