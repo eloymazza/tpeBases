@@ -34,23 +34,17 @@ INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria
 -- LOS SIGUIENTES TRIGGERS/FUNCIO|NES CHECKEAN QUE EL PESO MAXIMO TOLERADO POR LA 
 -- FILA NO SE SOBREPASE
 
--- Tigger para verificar peso de fila cada vez q se inserta 
-CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
-AFTER INSERT 
-ON GR17_MOV_ENTRADA for each row
-EXECUTE PROCEDURE TRFN_GR17_verificarpeso();
-
-
--- El peso de los pallets de una fila no debe superar al máximo de la fila.
-CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso() 
-RETURNS TRIGGER AS $verif$
-BEGIN 
-    IF sumaPesoFila(new.nro_fila, new.nro_estanteria) > getMaxPeso(new.nro_fila, new.nro_estanteria) 
-    THEN RAISE EXCEPTION 'El peso total de los pallets de una fila no pueden superar el  peso máximo de dicha fila';
-    END IF;
-RETURN NEW;
+-- Obtener Max_Peso dada una fila y una estanteria
+CREATE OR REPLACE FUNCTION FN_GR17_getMaxPeso(int, int) 
+RETURNS numeric AS $$
+BEGIN
+    RETURN  
+        (SELECT peso_max_kg 
+        FROM GR17_FILA 
+        WHERE nro_fila= $1 AND nro_estanteria=$2);
 END;
-$verif$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
+
 
 -- Sumatoria del peso de todos los pallets dada una fila y una estanteria
 CREATE OR REPLACE FUNCTION FN_GR17_sumaPesoFila(int,int) 
@@ -67,16 +61,22 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- Obtener Max_Peso dada una fila y una estanteria
-CREATE OR REPLACE FUNCTION FN_GR17_getMaxPeso(int, int) 
-RETURNS numeric AS $$
-BEGIN
-    RETURN  
-        (SELECT peso_max_kg 
-        FROM GR17_FILA 
-        WHERE nro_fila= $1 AND nro_estanteria=$2);
+-- El peso de los pallets de una fila no debe superar al máximo de la fila.
+CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso() 
+RETURNS TRIGGER AS $verif$
+BEGIN 
+    IF sumaPesoFila(new.nro_fila, new.nro_estanteria) > getMaxPeso(new.nro_fila, new.nro_estanteria) 
+    THEN RAISE EXCEPTION 'El peso total de los pallets de una fila no pueden superar el  peso máximo de dicha fila';
+    END IF;
+RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$verif$ LANGUAGE plpgsql;
+
+-- Tigger para verificar peso de fila cada vez q se inserta 
+CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
+AFTER INSERT 
+ON GR17_MOV_ENTRADA for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarPeso();
 
 
 --INSERCION QUE PROMUEVE RESTRICCION TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA:
@@ -93,14 +93,10 @@ INSERT INTO GR17_MOV_ENTRADA (id_movimiento, transporte, guia,cod_pallet,id_alqu
 -- lOS SIGUIENTES TRIGGERS/FUNCIONES HACEN EL UPDATE DEL ESTADO DE
 -- ALQUILER_POSICIONES AL REALIZAR UN  MOVIMIENTO
 
--- Trigger para modificar estado al ingresar un pallet
-CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_ENTRADA
-AFTER INSERT OR UPDATE OF nro_estanteria, nro_fila, nro_posicion, id_alquiler
-ON GR17_MOV_ENTRADA FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion();
+
 
 -- Actualiza el estado de la posicion al ingresar un nuevo pallet
-CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_entrada() 
+CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion() 
 RETURNS TRIGGER AS $BODY$
 BEGIN 
     UPDATE GR17_ALQUILER_POSICIONES 
@@ -110,11 +106,12 @@ RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
 
--- Trigger para modificar estado al quitar  un pallet
-CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_SALIDA
-AFTER INSERT
-ON GR17_MOV_SALIDA FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_salida();
+-- Trigger para modificar estado al ingresar un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_ENTRADA
+AFTER INSERT OR UPDATE OF nro_estanteria, nro_fila, nro_posicion, id_alquiler
+ON GR17_MOV_ENTRADA FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion();
+
 
 -- Actualiza el estado de la posicion al quitar un pallet
 CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_salida() 
@@ -131,12 +128,13 @@ RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
 
-
--- Trigger para modificar estado al realizar un movimiento interno  un pallet
-CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_INTERNO
+-- Trigger para modificar estado al quitar  un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_SALIDA
 AFTER INSERT
-ON GR17_MOV_INTERNO FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_interno();
+ON GR17_MOV_SALIDA FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_salida();
+
+
 
 -- Actualiza el estado de la posicion al realar un movimiento interno 
 CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_interno() 
@@ -173,6 +171,13 @@ BEGIN
 RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
+
+
+-- Trigger para modificar estado al realizar un movimiento interno  un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_INTERNO
+AFTER INSERT
+ON GR17_MOV_INTERNO FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_interno();
 
 -- FUNCIONES PARA REALIZAR LOS SERVICIOS DEL PUNTO C
 
@@ -286,61 +291,4 @@ JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
 WHERE getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia > 0
 ORDER BY 1 desc
 LIMIT 10;
-
-
--- CEMENTERIO DE METODOS
-/*
--- Trigger para controlar que cada movimiento interno referencie a otro mov interno
--- O a un movmiento de entrada.
-CREATE TRIGGER TR_GR17_MOV_INTERNO_VERIFICAR_MOV_ANTERIOR
-AFTER INSERT OR UPDATE OF id_movimiento_anterior
-ON GR17_MOV_INTERNO FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_verificaMovAnterior();
-
--- Vefirica movimiento anterior es movimiento interno o movimiento de entrada.
-CREATE OR REPLACE FUNCTION TRFN_GR17_verificaMovAnterior() 
-RETURNS TRIGGER AS $body$
-BEGIN 
-    IF FN_GR17_getTipoMovimiento(new.id_movimiento_anterior) = 's' 
-    THEN RAISE EXCEPTION 'Los movimientos internos solo pueden hacer referencia
-    a un movimiento de entrada o a otro movimiento interno';
-    END IF;
-RETURN NEW;
-END;
-$body$ LANGUAGE plpgsql;
-
--- Retorna el tipo de un movimiento dado un id_movimiento como parametro
-CREATE OR REPLACE FUNCTION FN_GR17_getTipoMovimiento(int) 
-RETURNS char AS $$
-BEGIN 
-RETURN (
-    SELECT tipo 
-    FROM GR17_MOVIMIENTO 
-    WHERE id_movimiento = $1
-);
-END;
-$$ LANGUAGE plpgsql;
-
-
-
--- Tirggers para impedir update de las FKs de los movimientos de entrada
-CREATE TRIGGER TR_GR17_IMPEDIR_UPDATE_FK_MOVIMIENTO_ENTRADA
-BEFORE UPDATE OF id_alquiler, id_movimiento, cod_pallet, nro_posicion, nro_estanteria, nro_fila
-ON GR17_MOV_ENTRADA FOR STATEMENT
-EXECUTE PROCEDURE TRFN_GR17_excepcionAlActualizarMov();
-
--- Tirggers para impedir update de las FKs los movimientos de salida
-CREATE TRIGGER TR_GR17_IMPEDIR_UPDATE_FK_MOVIMIENTO_SALIDA
-BEFORE UPDATE OF 
-ON GR17_MOV_ENTRADA FOR STATEMENT
-EXECUTE PROCEDURE TRFN_GR17_excepcionAlActualizarMov();
-
--- Actualiza el estado de la posicion al quitar un pallet
-CREATE OR REPLACE FUNCTION TRFN_GR17_excepcionAlActualizarMov() 
-RETURNS TRIGGER AS $BODY$
-BEGIN 
-RAISE EXCEPTION 'No puedes editar las FKs de movimientos';
-END;
-$BODY$ LANGUAGE plpgsql;*/
-
 
