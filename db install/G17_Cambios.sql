@@ -285,10 +285,10 @@ $$ LANGUAGE plpgsql;
 
 -- D-2  Vista que lista  los 10 clientes que más dinero han invertido en el último año (tomar el momento en el que se ejecuta la consulta hacia atrás).
 CREATE VIEW GR17_CLIENTES_MAS_VALIOSOS AS
-SELECT getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido 
+SELECT GR17_FN_getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido
 FROM GR17_ALQUILER a
 JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
-WHERE getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia > 0
+WHERE GR17_FN_getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia > 0
 ORDER BY 1 desc
 LIMIT 10;
 

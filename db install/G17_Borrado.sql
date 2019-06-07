@@ -1,3 +1,12 @@
+drop function IF EXISTS trfn_gr17_verificarpeso() CASCADE;
+drop function IF EXISTS trfn_gr17_actualizarestadoposicion() CASCADE;
+drop function IF EXISTS trfn_gr17_actualizarestadoposicion_salida() CASCADE;
+drop function IF EXISTS trfn_gr17_actualizarestadoposicion_interno() CASCADE;
+drop function IF EXISTS fn_gr17_getposicioneslibres(date) CASCADE;
+drop function IF EXISTS fn_gr17_getmaxpeso(integer, integer) CASCADE;
+drop function IF EXISTS fn_gr17_sumapesofila(integer, integer) CASCADE;
+drop function IF EXISTS fn_gr17_getclientesanotificar(integer) CASCADE;
+drop function IF EXISTS gr17_fn_getcantdias(date, date) CASCADE;
 DROP TABLE IF EXISTS GR17_ALQUILER CASCADE;
 DROP TABLE IF EXISTS GR17_ALQUILER_POSICIONES CASCADE;
 DROP TABLE IF EXISTS GR17_CLIENTE CASCADE; 
