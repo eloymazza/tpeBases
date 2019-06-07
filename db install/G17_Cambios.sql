@@ -65,7 +65,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso() 
 RETURNS TRIGGER AS $verif$
 BEGIN 
-    IF sumaPesoFila(new.nro_fila, new.nro_estanteria) > getMaxPeso(new.nro_fila, new.nro_estanteria) 
+    IF FN_GR17_sumaPesoFila(new.nro_fila, new.nro_estanteria) > FN_GR17_getMaxPeso(new.nro_fila, new.nro_estanteria)
     THEN RAISE EXCEPTION 'El peso total de los pallets de una fila no pueden superar el  peso máximo de dicha fila';
     END IF;
 RETURN NEW;
@@ -140,14 +140,14 @@ EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_salida();
 CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_interno() 
 RETURNS TRIGGER AS $BODY$
 BEGIN 
-    IF (SELECT tipo FROM GR17_MOVIMIENTO WHERE id_movimiento = new.id_movimiento_anterior) = 'e' THEN
+    IF (SELECT tipo FROM GR17_MOVIMIENTO WHERE id_movimiento = new.id_movimiento_entrada) IS NOT NULL THEN
         UPDATE GR17_ALQUILER_POSICIONES 
         SET estado='false'
         WHERE 
-        nro_posicion = (SELECT nro_posicion FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior) AND
-        nro_fila =  (SELECT nro_fila FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior) AND 
-        nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior) AND 
-        id_alquiler = (SELECT id_alquiler FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_anterior);
+        nro_posicion = (SELECT nro_posicion FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada) AND
+        nro_fila =  (SELECT nro_fila FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada) AND
+        nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada) AND
+        id_alquiler = (SELECT id_alquiler FROM GR17_MOV_ENTRADA WHERE id_movimiento=new.id_movimiento_entrada);
 
         UPDATE GR17_ALQUILER_POSICIONES
         SET estado='true'
@@ -158,9 +158,9 @@ BEGIN
         UPDATE GR17_ALQUILER_POSICIONES 
         SET estado='false'
         WHERE 
-        nro_posicion = (SELECT nro_posicion FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_anterior) AND
-        nro_fila =  (SELECT nro_fila FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_anterior) AND
-        nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_anterior);
+        nro_posicion = (SELECT nro_posicion FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_interno) AND
+        nro_fila =  (SELECT nro_fila FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_interno) AND
+        nro_estanteria = (SELECT nro_estanteria FROM GR17_MOV_INTERNO WHERE id_movimiento=new.id_movimiento_interno);
 
         UPDATE GR17_ALQUILER_POSICIONES
         SET estado='true'
@@ -285,7 +285,7 @@ $$ LANGUAGE plpgsql;
 
 -- D-2  Vista que lista  los 10 clientes que más dinero han invertido en el último año (tomar el momento en el que se ejecuta la consulta hacia atrás).
 CREATE VIEW GR17_CLIENTES_MAS_VALIOSOS AS
-SELECT GR17_FN_getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia AS “Importe”, a.id_cliente, c.nombre, c.apellido
+SELECT GR17_FN_getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia AS "Importe", a.id_cliente, c.nombre, c.apellido
 FROM GR17_ALQUILER a
 JOIN GR17_CLIENTE c ON (c.cuit_cuil = a.id_cliente)
 WHERE GR17_FN_getCantDias(a.fecha_desde, a.fecha_hasta) * a.importe_dia > 0

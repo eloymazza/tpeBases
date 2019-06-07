@@ -4,7 +4,7 @@
     function getClientesANotificar(){
         global $db;
         $dias = $_POST["dias"];
-        $query = $db->prepare("SELECT * FROM getClientesANotificar($dias)");
+        $query = $db->prepare("SELECT * FROM FN_GR17_getClientesANotificar($dias)");
         $query->execute();
         $clientes = $query->fetchAll(PDO::FETCH_ASSOC);
         if(sizeOf($clientes) == 0){
