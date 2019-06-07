@@ -1,5 +1,6 @@
 <?php
     include_once('dbConnection.php');
+    include_once('templates/datosClientes.php');
     function getClientesANotificar(){
         global $db;
         $dias = $_POST["dias"];
@@ -10,13 +11,7 @@
             echo "No hay vencimientos dentro de $dias dias.";
         }
         else{
-            foreach ($clientes as $cliente){
-                echo "
-                <p>Cuit-Cuil: $cliente[cuit_cuil]</p>
-                <p>Apellido: $cliente[apellido] </p>
-                <p>Nombre:$cliente[nombre] </p>
-                <p>Fecha Alta: $cliente[fecha_alta] </p>";
-            }
+            datosClientesView($clientes);
         }
         echo "<a href='index.php'> Home";
        
