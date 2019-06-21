@@ -25,6 +25,7 @@ ALTER TABLE GR17_MOV_INTERNO ADD CONSTRAINT CHK_GR17_MOVIMIENTO_INTERNO_REFERENC
     (id_movimiento_entrada IS NOT NULL AND id_movimiento_interno IS NULL) OR 
     (id_movimiento_entrada IS NULL AND id_movimiento_interno IS NOT NULL)
 );
+
 -- INSERCION QUE PROMUEVE RESTRICCION CHK_GR17_MOVIMIENTO_INTERNO_REFERENCIAS
 /*
 INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria, nro_fila, id_movimiento_entrada, id_movimiento_interno) VALUES
@@ -34,32 +35,36 @@ INSERT INTO GR17_MOV_INTERNO (id_movimiento, razon, nro_posicion, nro_estanteria
 -- LOS SIGUIENTES TRIGGERS/FUNCIO|NES CHECKEAN QUE EL PESO MAXIMO TOLERADO POR LA 
 -- FILA NO SE SOBREPASE
 
--- Obtener Max_Peso dada una fila y una estanteria
-CREATE OR REPLACE FUNCTION FN_GR17_getMaxPeso(int, int) 
-RETURNS numeric AS $$
-BEGIN
-    RETURN  
-        (SELECT peso_max_kg 
-        FROM GR17_FILA 
-        WHERE nro_fila= $1 AND nro_estanteria=$2);
-END;
-$$ LANGUAGE plpgsql;
 
+-- Tigger para verificar peso de fila cada vez q se inserta 
+CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
+AFTER INSERT 
+ON GR17_MOV_ENTRADA for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarPeso();
 
--- Sumatoria del peso de todos los pallets dada una fila y una estanteria
-CREATE OR REPLACE FUNCTION FN_GR17_sumaPesoFila(int,int) 
-RETURNS numeric AS $$
-BEGIN
-    RETURN  
-        (SELECT SUM(peso) 
-        FROM GR17_PALLET
-        WHERE cod_pallet IN (
-            SELECT cod_pallet
-            FROM GR17_MOV_ENTRADA
-            WHERE nro_fila=$1 AND nro_estanteria=$2)); 
-END;
-$$ LANGUAGE plpgsql;
+-- Tigger para verificar peso de fila cada vez q se realizan movimientos internos 
+CREATE TRIGGER TR_GR17_MOV_INTERNO_VERIFICAR_PESO_FILA
+AFTER INSERT 
+ON GR17_MOV_INTERNO for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarPeso();
 
+-- Tigger para verificar peso total de una fila si se updatea el max_peso de la fila
+CREATE TRIGGER TR_GR17_VERIFICAR_PESO_FILA_MAX_PESO_FILA_ACTUALIZADO
+AFTER UPDATE OF max_peso_kg 
+ON GR17_FILA for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarPeso_despues_de_actualizar_max_peso_fila();
+
+-- Tigger para verificar que no se sobrepase peso total de una fila si se updatea el peso de un pallet
+CREATE TRIGGER TR_GR17_VERIFICAR_PESO_FILA_PESO_PALLET_ACTUALIZADO
+AFTER UPDATE OF peso 
+ON GR17_PALLET for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarPeso_despues_de_actualizar_peso_pallet();
+
+-- Tigger para verificar que no se sobrepase peso total de una fila si se updatea cod_pallet de un mov_entrada
+CREATE TRIGGER TR_GR17_VERIFICAR_PESO_FILA_COD_PALLET_ACTUALIZADO_EN_MOV_ENTRADA
+AFTER UPDATE OF peso 
+ON GR17_PALLET for each row
+EXECUTE PROCEDURE TRFN_GR17_verificarPeso();
 
 -- El peso de los pallets de una fila no debe superar al máximo de la fila.
 CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso() 
@@ -72,11 +77,66 @@ RETURN NEW;
 END;
 $verif$ LANGUAGE plpgsql;
 
--- Tigger para verificar peso de fila cada vez q se inserta 
-CREATE TRIGGER TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA 
-AFTER INSERT 
-ON GR17_MOV_ENTRADA for each row
-EXECUTE PROCEDURE TRFN_GR17_verificarPeso();
+-- El peso de los pallets de una fila no debe superar al máximo de la fila luego de que esta halla sido actualzada
+CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso_despues_de_actualizar_max_peso_fila() 
+RETURNS TRIGGER AS $verif$
+BEGIN 
+    IF FN_GR17_sumaPesoFila(new.nro_fila, new.nro_estanteria) > FN_GR17_getMaxPeso(new.nro_fila, new.nro_estanteria)
+    THEN RAISE EXCEPTION 'No puede actualizar MAX_PESO_KG ya que esto haria que el peso maximo de la fila se sobrepasara. Quite pallets a la fila
+    hasta que este aviso desaparezca.
+    ';
+    END IF;
+RETURN NEW;
+END;
+$verif$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION TRFN_GR17_verificarPeso_despues_de_actualizar_peso_pallet() 
+RETURNS TRIGGER AS $$
+DECLARE 
+nroFila int;
+nroEstanteria int;
+BEGIN 
+    SELECT nro_fila INTO nroFila FROM GR17_MOV_ENTRADA WHERE cod_pallet=new.cod_pallet;
+    SELECT nro_estanteria INTO nroEstanteria FROM GR17_MOV_ENTRADA WHERE cod_pallet=new.cod_pallet;
+    IF FN_GR17_sumaPesoFila(nroFila, nroEstanteria) > FN_GR17_getMaxPeso(nroFila, nroEstanteria)
+    THEN RAISE EXCEPTION 'No puede actualizar peso con ese valor ya que supera el peso maximo permitido por fila';
+    END IF;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Sumatoria del peso de todos los pallets dada una fila y una estanteria
+CREATE OR REPLACE FUNCTION FN_GR17_sumaPesoFila(int,int) 
+RETURNS numeric AS $$
+BEGIN
+    RETURN  
+        (SELECT SUM(peso) 
+        FROM GR17_PALLET
+        WHERE cod_pallet IN (
+            SELECT cod_pallet
+            FROM GR17_MOV_ENTRADA me INNER JOIN GR17_ALQUILER_POSICIONES ap ON
+            me.nro_fila = ap.nro_fila AND
+            me.nro_estanteria = ap.nro_estanteria AND
+            me.nro_posicion = ap.nro_posicion
+            WHERE nro_fila=$1 AND nro_estanteria=$2 AND
+            ap.estado = true
+            )
+        ); 
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Obtener Max_Peso dada una fila y una estanteria
+CREATE OR REPLACE FUNCTION FN_GR17_getMaxPeso(int, int) 
+RETURNS numeric AS $$
+BEGIN
+    RETURN  
+        (SELECT peso_max_kg 
+        FROM GR17_FILA 
+        WHERE nro_fila= $1 AND nro_estanteria=$2);
+END;
+$$ LANGUAGE plpgsql;
+
 
 
 --INSERCION QUE PROMUEVE RESTRICCION TR_GR17_MOV_ENTRADA_VERIFICAR_PESO_FILA:
@@ -95,6 +155,12 @@ INSERT INTO GR17_MOV_ENTRADA (id_movimiento, transporte, guia,cod_pallet,id_alqu
 
 
 
+-- Trigger para modificar estado al ingresar un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_ENTRADA
+AFTER INSERT OR UPDATE OF nro_estanteria, nro_fila, nro_posicion, id_alquiler
+ON GR17_MOV_ENTRADA FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion();
+
 -- Actualiza el estado de la posicion al ingresar un nuevo pallet
 CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion() 
 RETURNS TRIGGER AS $BODY$
@@ -106,12 +172,11 @@ RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
 
--- Trigger para modificar estado al ingresar un pallet
-CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_ENTRADA
-AFTER INSERT OR UPDATE OF nro_estanteria, nro_fila, nro_posicion, id_alquiler
-ON GR17_MOV_ENTRADA FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion();
-
+-- Trigger para modificar estado al quitar  un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_SALIDA
+AFTER INSERT
+ON GR17_MOV_SALIDA FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_salida();
 
 -- Actualiza el estado de la posicion al quitar un pallet
 CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_salida() 
@@ -128,13 +193,11 @@ RETURN NEW;
 END;
 $BODY$ LANGUAGE plpgsql;
 
--- Trigger para modificar estado al quitar  un pallet
-CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_SALIDA
+-- Trigger para modificar estado al realizar un movimiento interno  un pallet
+CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_INTERNO
 AFTER INSERT
-ON GR17_MOV_SALIDA FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_salida();
-
-
+ON GR17_MOV_INTERNO FOR EACH ROW
+EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_interno();
 
 -- Actualiza el estado de la posicion al realar un movimiento interno 
 CREATE OR REPLACE FUNCTION TRFN_GR17_actualizarEstadoPosicion_interno() 
@@ -173,11 +236,6 @@ END;
 $BODY$ LANGUAGE plpgsql;
 
 
--- Trigger para modificar estado al realizar un movimiento interno  un pallet
-CREATE TRIGGER TR_GR17_ACTUALIZAR_ESTADO_MOV_INTERNO
-AFTER INSERT
-ON GR17_MOV_INTERNO FOR EACH ROW
-EXECUTE PROCEDURE TRFN_GR17_actualizarEstadoPosicion_interno();
 
 -- FUNCIONES PARA REALIZAR LOS SERVICIOS DEL PUNTO C
 
